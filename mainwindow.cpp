@@ -8,7 +8,7 @@
 #include <QtCore>
 #include <QImageWriter>
 #include <qzipreader_p.h>
-#include <qzipreader_p.h>
+#include <qzipwriter_p.h>
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -20,21 +20,33 @@ MainWindow::~MainWindow()
 {
     delete ui;
 }
+QTime fromMSec( quint64 totalMsec )
+{
+    uint hour = totalMsec / 1000 / 60 / 60 % 60;
+    uint minute = totalMsec / 1000 / 60 % 60;
+    uint sec = totalMsec / 1000 % 60;
+    uint msec = totalMsec % 1000;
 
-//сортировка разрешения
-//считать с архива
+    return QTime( hour, minute, sec, msec );
+}
 void MainWindow::on_pushButton_clicked()
 {
-QString arr[]={".jpg",".gif",".tif",".bmp",".png",".pcx"};
+QString arr[]={".jpg",".gif",".bmp",".png",".jpeg"};
 QString arch;
 bool check = false;
-     QStringList fileName = QFileDialog::getOpenFileNames(
+     QStringList fileName = QFileDialog ::getOpenFileNames(
         this,
         tr("open a file."),
         "D:/",
-        tr("images(*jpg *gif *tif *bmp *png *pcx);;archive(*zip)"));
+        tr("images(*jpg *gif *bmp *png *jpeg);;archive(*zip)"));
+
+       QTime  t1 = QTime::currentTime();
+
+
     if (fileName[0].contains("zip"))
     {
+        QFileInfo tmp(fileName[0]);
+        arch=tmp.path();
         QZipReader zip_reader(fileName[0]);
              if (zip_reader.exists()) {
                  foreach (QZipReader::FileInfo info, zip_reader.fileInfoList()) {
@@ -51,6 +63,7 @@ bool check = false;
                         break;
                     }
                  }
+                 qDebug()<<arch;
                  arch=arch+"/myFolder";
                  QDir dir(arch);
                  if (!dir.exists())
@@ -59,34 +72,37 @@ bool check = false;
                  {
                  zip_reader.extractAll(arch);
                  QStringList filters;
-                    filters << "*.jpg" << "*.gif" << "*.tif" << "*.bmp" << "*.png" << "*.pcx";
+                    filters << "*.jpg" << "*.gif" << "*.bmp" << "*.png" << "*.jpeg";
                     dir.setNameFilters(filters);
-                 QStringList jpgs = dir.entryList();
-                 foreach (QString file, jpgs)
+                 QFileInfoList jpgs = dir.entryInfoList();
+                 for (int i=0;i<jpgs.size();i++)
                  {
-                    /* QImageWriter inf;
-                     inf.setFileName(fileinfo.fileName());*/
-                     QImage myImage;
-                     QString  path = arch +"/"+ file;
-                     myImage.load(path);
-                     QFileInfo inf(path);
-                     QString res = QVariant(myImage.width()).toString()+ "x" +QVariant(myImage.height()).toString();
-                     ui->tableWidget->setColumnCount(5);
-                     ui->tableWidget->setRowCount(count+1);
-                     ui->tableWidget->setHorizontalHeaderItem(0,new QTableWidgetItem("Name"));
-                      ui->tableWidget->setHorizontalHeaderItem(1,new QTableWidgetItem("Extension"));
-                     ui->tableWidget->setHorizontalHeaderItem(2,new QTableWidgetItem("Size (bits)"));
-                     ui->tableWidget->setHorizontalHeaderItem(3,new QTableWidgetItem("Resolution"));
-                     ui->tableWidget->setHorizontalHeaderItem(4,new QTableWidgetItem("Deepth"));
-                   //  ui->tableWidget->setHorizontalHeaderItem(4,new QTableWidgetItem("Compression"));
-                     ui->tableWidget->setItem(count,0,new QTableWidgetItem(inf.fileName()));
-                     ui->tableWidget->setItem(count,1,new QTableWidgetItem(inf.suffix()));
-                     ui->tableWidget->setItem(count,2,new QTableWidgetItem(QVariant(inf.size()).toString()));
-                     ui->tableWidget->setItem(count,3,new QTableWidgetItem(res));
-                     ui->tableWidget->setItem(count,4,new QTableWidgetItem(QVariant(myImage.depth()).toString()));
-                  //   ui->tableWidget->setItem(count,4,new QTableWidgetItem(QVariant(inf.compression()).toString()));
-                     count ++;
-                    }
+                 QFileInfo fileinfo=jpgs[i];
+                 QString path = fileinfo.path();
+                 QString str = fileinfo.fileName();
+                /* QImageWriter inf;
+                 inf.setFileName(fileinfo.fileName());*/
+                 QImage myImage;
+                 path = path +"/"+ str;
+                 myImage.load(path);
+                 int size = fileinfo.size();
+                 QString res = QVariant(myImage.width()).toString()+ "x" +QVariant(myImage.height()).toString();
+                 ui->tableWidget->setColumnCount(5);
+                 ui->tableWidget->setRowCount(count+1);
+                 ui->tableWidget->setHorizontalHeaderItem(0,new QTableWidgetItem("Name"));
+                  ui->tableWidget->setHorizontalHeaderItem(1,new QTableWidgetItem("Extension"));
+                 ui->tableWidget->setHorizontalHeaderItem(2,new QTableWidgetItem("Size (bits)"));
+                 ui->tableWidget->setHorizontalHeaderItem(3,new QTableWidgetItem("Resolution"));
+                 ui->tableWidget->setHorizontalHeaderItem(4,new QTableWidgetItem("Deepth"));
+               //  ui->tableWidget->setHorizontalHeaderItem(4,new QTableWidgetItem("Compression"));
+                 ui->tableWidget->setItem(count,0,new QTableWidgetItem(str));
+                 ui->tableWidget->setItem(count,1,new QTableWidgetItem(fileinfo.suffix()));
+                 ui->tableWidget->setItem(count,2,new QTableWidgetItem(QVariant(size).toString()));
+                 ui->tableWidget->setItem(count,3,new QTableWidgetItem(res));
+                 ui->tableWidget->setItem(count,4,new QTableWidgetItem(QVariant(myImage.depth()).toString()));
+              //   ui->tableWidget->setItem(count,4,new QTableWidgetItem(QVariant(inf.compression()).toString()));
+                 count ++;
+                 }
                      ui->tableWidget->sortByColumn(0,Qt::AscendingOrder);
                      ui->tableWidget->setSortingEnabled(true);
                        for (int i = 0; i<  ui->tableWidget->rowCount();i++){
@@ -100,7 +116,7 @@ bool check = false;
                           ui->tableWidget->setItem(i, 2, it);
                    }
                  }
-                 dir.removeRecursively();
+                dir.removeRecursively();
              }
     }
     else
@@ -147,4 +163,8 @@ bool check = false;
          ui->tableWidget->setItem(i, 2, it);
   }
     }
+    quint64  msec = qAbs(QTime::currentTime().msecsTo(t1));
+    QTime  t3 = fromMSec(msec);
+  qDebug() <<"you spent "<< t3 << "of yor precious time";
 }
+//
