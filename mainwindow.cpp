@@ -9,6 +9,7 @@
 #include <QImageWriter>
 #include <qzipreader_p.h>
 #include <qzipwriter_p.h>
+#include <QStyledItemDelegate>
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -31,6 +32,7 @@ QTime fromMSec( quint64 totalMsec )
 }
 void MainWindow::on_pushButton_clicked()
 {
+  ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
 QString arr[]={".jpg",".gif",".bmp",".png",".jpeg"};
 QString arch;
 bool check = false;
